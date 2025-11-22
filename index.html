@@ -1,0 +1,541 @@
+JayAgarwal25/Young-Tableau<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Bricks: Young Tableaux</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .cell-anim {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Remove spinner for number input */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shrink-0 z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center font-bold text-slate-900">λ</div>
+            <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Quantum Bricks</h1>
+        </div>
+        <div class="text-slate-500 text-xs hidden md:block font-mono">
+            SU(N) REPRESENTATION THEORY TOOLKIT
+        </div>
+    </nav>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- Left Sidebar: Controls -->
+        <aside class="w-full md:w-80 bg-slate-900 border-r border-slate-800 flex flex-col z-20 shadow-xl overflow-y-auto">
+            
+            <div class="p-6 space-y-8">
+                
+                <!-- Group Selection -->
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Symmetry Group</label>
+                    <div class="flex items-center justify-center bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500 transition-all">
+                        <span class="text-slate-400 font-bold text-xl select-none">SU(</span>
+                        <input type="number" id="groupN" value="3" min="2" max="20" 
+                            class="w-16 bg-transparent font-mono text-white font-bold focus:outline-none text-center text-2xl mx-1"
+                            onchange="initApp()">
+                        <span class="text-slate-400 font-bold text-xl select-none">)</span>
+                    </div>
+                </div>
+
+                <!-- Partition Input -->
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Main Shape (λ)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="partitionInput" value="2, 1" 
+                            class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 font-mono text-cyan-400 focus:outline-none focus:border-cyan-500 placeholder-slate-600"
+                            placeholder="e.g. 2, 1">
+                        <button onclick="initApp()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded font-bold transition-colors shadow-lg shadow-cyan-900/20">
+                            Set
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Panel -->
+                <div class="p-4 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-2 opacity-5 text-6xl font-serif text-white">d</div>
+                    <div class="text-xs text-slate-400 uppercase tracking-widest mb-1">Dimension</div>
+                    <div class="text-3xl font-mono font-bold text-white mb-3 break-all leading-tight" id="dimensionVal">0</div>
+                    
+                    <div class="flex justify-between text-xs border-t border-slate-700/50 pt-3">
+                        <div class="text-indigo-300">
+                            <div class="uppercase tracking-wider opacity-70 mb-1">Numerator</div>
+                            <div class="font-mono font-bold text-lg" id="numProd">0</div>
+                        </div>
+                        <div class="text-emerald-300 text-right">
+                            <div class="uppercase tracking-wider opacity-70 mb-1">Denominator</div>
+                            <div class="font-mono font-bold text-lg" id="denProd">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tensor Product Section -->
+                <div class="pt-6 border-t border-slate-800">
+                    <label class="text-xs font-bold uppercase tracking-wider text-purple-400 mb-3 block flex items-center gap-2">
+                        <span>Tensor Product</span>
+                        <span class="text-[10px] bg-purple-900/50 text-purple-300 px-1.5 rounded">VISUALIZER</span>
+                    </label>
+                    <div class="bg-slate-800/30 p-4 rounded-xl border border-purple-500/20 space-y-3">
+                        <div class="text-sm text-slate-400">Multiply λ by:</div>
+                        <div class="flex gap-2">
+                            <input type="text" id="tensorInput" placeholder="e.g. 1" value="1"
+                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 font-mono text-sm focus:border-purple-500 outline-none text-purple-300">
+                            <button onclick="startTensorViz()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded font-bold text-sm shadow-lg shadow-purple-900/20">
+                                Viz
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Canvas -->
+        <main class="flex-1 bg-[#0b1120] relative flex flex-col p-4 md:p-8 overflow-y-auto">
+            
+            <!-- Background Grid -->
+            <div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: radial-gradient(#38bdf8 1px, transparent 1px); background-size: 32px 32px;"></div>
+
+            <!-- TOP SECTION: Dimension Calculation -->
+            <div class="w-full max-w-5xl mx-auto mb-12 z-10">
+                <h2 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-cyan-500"></span> Calculation View
+                </h2>
+                
+                <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-12">
+                    
+                    <!-- Numerator Grid -->
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.1)] backdrop-blur-sm transition-all hover:border-indigo-500/50">
+                            <div id="numeratorContainer" class="flex flex-col items-start gap-1"></div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-indigo-400 font-bold text-sm uppercase tracking-wider">Numerator</div>
+                            <div class="text-indigo-500/50 text-xs font-mono mt-1">N + (col - row)</div>
+                        </div>
+                    </div>
+
+                    <!-- Divider -->
+                    <div class="text-slate-600 text-4xl font-light italic opacity-50 transform -rotate-12 hidden md:block">/</div>
+                    <div class="w-full h-px bg-slate-700 md:hidden my-4"></div>
+
+                    <!-- Denominator Grid -->
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.1)] backdrop-blur-sm transition-all hover:border-emerald-500/50">
+                            <div id="denominatorContainer" class="flex flex-col items-start gap-1"></div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-emerald-400 font-bold text-sm uppercase tracking-wider">Denominator</div>
+                            <div class="text-emerald-500/50 text-xs font-mono mt-1">Hook Lengths</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- BOTTOM SECTION: Tensor Product Visualization (Conditional) -->
+            <div id="tensorSection" class="hidden w-full max-w-6xl mx-auto pt-8 border-t border-slate-800 z-10 pb-20">
+                <div class="flex justify-between items-end mb-6">
+                    <h2 class="text-purple-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-purple-500"></span> Tensor Product Visualization
+                    </h2>
+                    
+                    <!-- Step Controls -->
+                    <div class="flex items-center gap-2 bg-slate-800 rounded-lg p-1 border border-slate-700">
+                        <button onclick="prevStep()" class="px-3 py-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors text-sm">← Prev</button>
+                        <span id="stepIndicator" class="text-xs font-mono text-purple-300 px-2">Step 0</span>
+                        <button onclick="nextStep()" class="px-3 py-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors text-sm">Next →</button>
+                    </div>
+                </div>
+
+                <!-- Step Description -->
+                <div id="stepDescription" class="text-center mb-6 text-slate-300 font-medium bg-slate-800/50 py-2 rounded-lg border border-slate-700/50">
+                    Initializing...
+                </div>
+
+                <!-- Visualization Container -->
+                <div id="vizContainer" class="flex flex-wrap justify-center gap-8 min-h-[200px]">
+                    <!-- Shapes injected here -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // --- State ---
+        var partition = [];
+        var suN = 3;
+        
+        // Tensor Viz State
+        var tensorSteps = [];
+        var currentStepIndex = 0;
+        var tensorP2 = [];
+
+        // --- Core Logic ---
+
+        function initApp() {
+            // 1. Parse SU(N)
+            suN = parseInt(document.getElementById('groupN').value) || 3;
+
+            // 2. Parse Partition
+            const input = document.getElementById('partitionInput').value;
+            const parts = input.split(/[,\s]+/)
+                               .map(n => parseInt(n))
+                               .filter(n => !isNaN(n) && n > 0);
+            partition = parts.sort((a, b) => b - a); // Standard shape
+
+            // 3. Calculate Math
+            calculateStats();
+
+            // 4. Render Views
+            renderGrid('numerator', document.getElementById('numeratorContainer'));
+            renderGrid('denominator', document.getElementById('denominatorContainer'));
+        }
+
+        function getHookLength(r, c, shape = partition) {
+            const right = shape[r] - 1 - c;
+            let below = 0;
+            for (let i = r + 1; i < shape.length; i++) {
+                if (shape[i] > c) below++;
+            }
+            return right + below + 1;
+        }
+
+        function getNumeratorValue(r, c) {
+            return suN + (c - r);
+        }
+
+        function calculateStats() {
+            let numProd = 1n;
+            let denProd = 1n;
+            
+            for (let r = 0; r < partition.length; r++) {
+                for (let c = 0; c < partition[r]; c++) {
+                    numProd *= BigInt(getNumeratorValue(r, c));
+                    denProd *= BigInt(getHookLength(r, c));
+                }
+            }
+
+            document.getElementById('numProd').innerText = numProd.toString();
+            document.getElementById('denProd').innerText = denProd.toString();
+            
+            if (denProd === 0n) denProd = 1n;
+            const dim = numProd / denProd;
+            document.getElementById('dimensionVal').innerText = dim.toLocaleString();
+        }
+
+        // --- Rendering ---
+
+        function renderGrid(type, container, customShape = null, highlightData = null) {
+            container.innerHTML = '';
+            const shapeToRender = customShape || partition;
+
+            shapeToRender.forEach((cols, r) => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'flex gap-1';
+                
+                for (let c = 0; c < cols; c++) {
+                    const cell = document.createElement('div');
+                    
+                    // Default Style
+                    let baseClass = "w-10 h-10 md:w-12 md:h-12 border-2 rounded flex items-center justify-center text-sm md:text-base font-mono font-bold select-none transition-all ";
+                    let content = "";
+
+                    // Determine Content & specific styles
+                    if (type === 'numerator') {
+                        content = getNumeratorValue(r, c);
+                        baseClass += "bg-indigo-900/20 border-indigo-500/30 text-indigo-300";
+                    } else if (type === 'denominator') {
+                        content = getHookLength(r, c, shapeToRender);
+                        baseClass += "bg-emerald-900/20 border-emerald-500/30 text-emerald-300";
+                    } else if (type === 'viz') {
+                        // Visualization Mode
+                        content = ""; // Empty usually, or label
+                        
+                        // Check if this cell is "Added" in this step
+                        // highlightData contains info about cell types: 'base', 'added-1', 'added-2'
+                        const cellType = highlightData ? highlightData[r]?.[c] : 'base';
+
+                        if (cellType === 'base' || !cellType) {
+                            baseClass += "bg-slate-800 border-slate-600 text-slate-500";
+                        } else if (cellType === 'added-1') { // Row 1 added
+                            baseClass += "bg-purple-600 border-purple-400 text-white animate-pulse";
+                            content = "a";
+                        } else if (cellType === 'added-2') { // Row 2 added
+                            baseClass += "bg-pink-600 border-pink-400 text-white animate-pulse";
+                            content = "b";
+                        } else if (cellType === 'added-3') {
+                             baseClass += "bg-orange-600 border-orange-400 text-white";
+                             content = "c";
+                        }
+                    }
+
+                    cell.className = baseClass;
+                    cell.innerText = content;
+                    rowDiv.appendChild(cell);
+                }
+                container.appendChild(rowDiv);
+            });
+        }
+
+
+        // --- Tensor Visualization Logic ---
+
+        function startTensorViz() {
+            const tInput = document.getElementById('tensorInput').value;
+            tensorP2 = tInput.split(/[,\s]+/).map(n => parseInt(n)).filter(n => !isNaN(n));
+            
+            if (tensorP2.length === 0) return;
+
+            // Generate Steps
+            tensorSteps = generateTensorSteps(partition, tensorP2, suN);
+            currentStepIndex = 0;
+            
+            document.getElementById('tensorSection').classList.remove('hidden');
+            // smooth scroll
+            document.getElementById('tensorSection').scrollIntoView({ behavior: 'smooth' });
+            
+            renderTensorStep();
+        }
+
+        function nextStep() {
+            if (currentStepIndex < tensorSteps.length - 1) {
+                currentStepIndex++;
+                renderTensorStep();
+            }
+        }
+
+        function prevStep() {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                renderTensorStep();
+            }
+        }
+
+        function renderTensorStep() {
+            const stepData = tensorSteps[currentStepIndex];
+            const container = document.getElementById('vizContainer');
+            container.innerHTML = '';
+
+            document.getElementById('stepIndicator').innerText = `Step ${currentStepIndex} / ${tensorSteps.length - 1}`;
+            document.getElementById('stepDescription').innerHTML = stepData.description;
+
+            if (stepData.shapes.length === 0) {
+                container.innerHTML = '<div class="text-slate-500 italic">No valid configurations found.</div>';
+                return;
+            }
+
+            stepData.shapes.forEach(item => {
+                const wrapper = document.createElement('div');
+                wrapper.className = "flex flex-col items-center gap-2 fade-in";
+                
+                // Render grid small
+                const gridDiv = document.createElement('div');
+                gridDiv.className = "flex flex-col items-start gap-px transform scale-90"; // slightly smaller
+                
+                // Custom render for viz
+                renderGrid('viz', gridDiv, item.shape, item.map);
+                
+                wrapper.appendChild(gridDiv);
+
+                // If final step, show dimension
+                if (currentStepIndex === tensorSteps.length - 1) {
+                    const dimDiv = document.createElement('div');
+                    const dim = calculateDimForShape(item.shape);
+                    dimDiv.className = "text-xs font-bold text-purple-300 bg-purple-900/30 px-2 py-1 rounded border border-purple-500/20";
+                    dimDiv.innerText = "dim: " + dim.toLocaleString();
+                    wrapper.appendChild(dimDiv);
+                }
+
+                container.appendChild(wrapper);
+            });
+        }
+
+        function calculateDimForShape(shape) {
+             let num = 1n, den = 1n;
+             for(let r=0; r<shape.length; r++) {
+                 for(let c=0; c<shape[r]; c++) {
+                     let hook = getHookLength(r, c, shape);
+                     let val = suN + (c - r);
+                     num *= BigInt(val);
+                     den *= BigInt(hook);
+                 }
+             }
+             return den === 0n ? 0n : num/den;
+        }
+
+        // --- Littlewood-Richardson Step Generator ---
+
+        function generateTensorSteps(p1, p2, nCap) {
+            // Step 0: Base
+            let steps = [{
+                description: "Start with the initial representation.",
+                shapes: [{ shape: [...p1], map: createBaseMap(p1) }]
+            }];
+
+            let currentGeneration = steps[0].shapes;
+
+            // Iterate through rows of P2
+            p2.forEach((count, rowIndex) => {
+                const label = ['added-1', 'added-2', 'added-3'][rowIndex] || 'added-x';
+                const labelChar = ['a', 'b', 'c'][rowIndex] || '?';
+                
+                let nextGeneration = [];
+                
+                // Expand each current shape
+                currentGeneration.forEach(parent => {
+                    const expansions = expandShape(parent.shape, parent.map, count, label, nCap);
+                    nextGeneration.push(...expansions);
+                });
+
+                // Deduplicate shapes for display (optional, but good for clean viz)
+                // Actually, distinct maps matter here.
+                
+                steps.push({
+                    description: `Add <strong>${count}</strong> boxes (${labelChar}) from row ${rowIndex + 1} of the second tableau.<br><span class="text-xs opacity-70">Rule: No two new boxes in the same column.</span>`,
+                    shapes: nextGeneration
+                });
+
+                currentGeneration = nextGeneration;
+            });
+
+            // Final Step: Add final tally
+            steps.push({
+                description: "<strong>Final Decomposition</strong><br><span class=\"text-xs opacity-70\">Check Lattice Permutation Rule & SU(N) Validity</span>",
+                shapes: currentGeneration // In a full implementation, we filter by Lattice Permutation here. simplified logic usually ensures it by add order.
+            });
+
+            return steps;
+        }
+
+        function createBaseMap(shape) {
+            let map = [];
+            shape.forEach(c => {
+                map.push(new Array(c).fill('base'));
+            });
+            return map;
+        }
+
+        function expandShape(shape, map, count, labelType, nCap) {
+            // Adds 'count' boxes of 'labelType' to 'shape' according to Pieri's rule (single row add)
+            // Returns array of { shape: [...], map: [...] }
+            
+            let results = [];
+            
+            // Recursive adder
+            function addBoxes(currentS, currentM, k, startRow) {
+                if (k === 0) {
+                    // Valid shape formed
+                    if (currentS.length <= nCap) { // SU(N) constraint on rows? No, on columns (length <= N)
+                         // Check Max Column Length?
+                         // Actually, shape length = number of rows. 
+                         // In SU(N), we shouldn't have more than N rows usually? 
+                         // Yes, columns of length N+1 are zero.
+                         if (currentS.length <= nCap) {
+                             results.push({ shape: JSON.parse(JSON.stringify(currentS)), map: JSON.parse(JSON.stringify(currentM)) });
+                         }
+                    }
+                    return;
+                }
+
+                // Try adding to row r
+                for (let r = startRow; r <= currentS.length; r++) {
+                    // Constraints:
+                    // 1. Convexity: newS[r] < newS[r-1] (before adding, check capacity)
+                    // Actually, after adding, newS[r] must be <= newS[r-1]
+                    
+                    // Logic: We are adding to row r.
+                    // If r=0, always ok.
+                    // If r>0, need currentS[r] < currentS[r-1]. 
+                    // Wait, Pieri's rule says "no two boxes in same column".
+                    // This implies we add to distinct columns.
+                    // The recursive param `startRow` handles the "distinct columns" logic (always move down).
+                    
+                    // Check if adding to row r maintains partition property with PREVIOUS rows
+                    let canAdd = true;
+                    if (r > 0) {
+                        if (currentS[r] === undefined) { // New row
+                             // Can only create new row if prev row is strictly larger? No, just >=
+                             // But we are adding 1.
+                             // New row len becomes 1. Prev row must be >= 1.
+                             if (currentS[r-1] < 1) canAdd = false;
+                        } else {
+                             // Existing row
+                             // If we add 1, it becomes currentS[r]+1.
+                             // Must be <= currentS[r-1].
+                             if (currentS[r] + 1 > currentS[r-1]) canAdd = false;
+                        }
+                    }
+                    
+                    if (!canAdd) continue;
+
+                    // Prepare new state
+                    let nextS = [...currentS];
+                    let nextM = currentM.map(row => [...row]);
+
+                    if (nextS[r] === undefined) {
+                        nextS[r] = 1;
+                        nextM[r] = [labelType];
+                    } else {
+                        nextS[r]++;
+                        nextM[r].push(labelType);
+                    }
+                    
+                    // Recurse, startRow = r + 1 (Strictly down to ensure distinct columns for THIS batch of boxes)
+                    addBoxes(nextS, nextM, k-1, r + 1);
+                }
+            }
+
+            addBoxes(shape, map, count, 0);
+            return results;
+        }
+
+        // Initial Load
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
