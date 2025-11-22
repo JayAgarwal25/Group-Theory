@@ -154,10 +154,17 @@
                     <div class="flex flex-col gap-3">
                         <input type="text" id="tensorInput" placeholder="e.g. 1" value="1"
                             class="w-full sci-input rounded-lg px-3 py-2.5 font-mono text-sm text-pink-300 placeholder-slate-600 focus:border-pink-500 focus:shadow-[0_0_0_2px_rgba(236,72,153,0.2)]">
-                        <button onclick="startTensorViz()" class="sci-btn rounded-lg px-4 py-2 font-semibold text-xs uppercase tracking-wide bg-gradient-to-br from-pink-500 to-rose-600 shadow-pink-500/20 hover:shadow-pink-500/30">
-                            Run Decomposition
+                        <button onclick="setTableau2()" class="sci-btn rounded-lg px-4 py-2 font-semibold text-xs uppercase tracking-wide bg-gradient-to-br from-pink-500 to-rose-600 shadow-pink-500/20 hover:shadow-pink-500/30">
+                            Set Tableau 2
                         </button>
                     </div>
+                </div>
+
+                <!-- Run Button -->
+                <div class="pt-4 border-t border-slate-800">
+                     <button onclick="startTensorViz()" class="w-full sci-btn rounded-lg px-4 py-3 font-bold text-sm uppercase tracking-widest bg-gradient-to-r from-purple-600 to-indigo-600 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 transition-all transform hover:-translate-y-0.5">
+                        Run Decomposition
+                    </button>
                 </div>
 
             </div>
@@ -220,9 +227,15 @@
                                .map(n => parseInt(n))
                                .filter(n => !isNaN(n) && n > 0);
             partition = parts.sort((a, b) => b - a); // Standard shape
+            
+            // Feedback
+            console.log("Tableau 1 Set:", partition);
+        }
 
-            // If we have a tensor input already, maybe re-run viz? 
-            // For now, just update state. User clicks Viz to run.
+        function setTableau2() {
+            const tInput = document.getElementById('tensorInput').value;
+            tensorP2 = tInput.split(/[,\s]+/).map(n => parseInt(n)).filter(n => !isNaN(n));
+            console.log("Tableau 2 Set:", tensorP2);
         }
 
         function getHookLength(r, c, shape = partition) {
@@ -290,9 +303,9 @@
         // --- Tensor Visualization Logic ---
 
         function startTensorViz() {
-            initApp(); // Ensure state is fresh
-            const tInput = document.getElementById('tensorInput').value;
-            tensorP2 = tInput.split(/[,\s]+/).map(n => parseInt(n)).filter(n => !isNaN(n));
+            // Ensure state is fresh if user didn't click Set buttons explicitly
+            if (partition.length === 0) initApp();
+            if (tensorP2.length === 0) setTableau2();
             
             if (tensorP2.length === 0) return;
 
@@ -375,7 +388,7 @@
              return den === 0n ? 0n : num/den;
         }
 
-        // --- Littlewood-Richardson Step Generator ---
+        // --- Littlewood-Richardson Logic ---
 
         function generateTensorSteps(p1, p2, nCap) {
             // Step 0: Base
@@ -387,36 +400,53 @@
                 ]
             }];
 
-            let currentGeneration = [{ shape: [...p1], map: createBaseMap(p1) }]; // Only expand from p1
+            let currentGeneration = [{ shape: [...p1], map: createBaseMap(p1) }];
 
-            // Iterate through rows of P2
+            // Iterate through rows of P2 (labels a, b, c...)
             p2.forEach((count, rowIndex) => {
-                const label = ['added-1', 'added-2', 'added-3'][rowIndex] || 'added-x';
-                const labelChar = ['a', 'b', 'c'][rowIndex] || '?';
+                const labelType = `added-${rowIndex + 1}`;
+                const labelChar = String.fromCharCode(97 + rowIndex); // a, b, c...
                 
-                let nextGeneration = [];
-                
-                // Expand each current shape
-                currentGeneration.forEach(parent => {
-                    const expansions = expandShape(parent.shape, parent.map, count, label, nCap);
-                    nextGeneration.push(...expansions);
-                });
+                // Add boxes one by one
+                for (let k = 1; k <= count; k++) {
+                    let nextGeneration = [];
+                    
+                    currentGeneration.forEach(parent => {
+                        // Try adding one box to every possible valid position
+                        const expansions = addSingleBox(parent.shape, parent.map, labelType, nCap);
+                        
+                        expansions.forEach(exp => {
+                            // Filter 1: Lattice Permutation Rule
+                            // Must be satisfied at every step of the addition
+                            if (checkLattice(exp.map)) {
+                                nextGeneration.push(exp);
+                            }
+                        });
+                    });
 
-                // Deduplicate shapes for display (optional, but good for clean viz)
-                // Actually, distinct maps matter here.
-                
-                steps.push({
-                    description: `Add <strong>${count}</strong> boxes (${labelChar}) from row ${rowIndex + 1} of the second tableau.<br><span class="text-xs opacity-70">Rule: No two new boxes in the same column.</span>`,
-                    shapes: nextGeneration
-                });
+                    // Deduplicate: If two tableaux have the same shape and same label distribution, they are identical.
+                    nextGeneration = deduplicateShapes(nextGeneration);
+                    
+                    steps.push({
+                        description: `Add box <strong>${k}</strong> of <strong>${count}</strong> [${labelChar}] from row ${rowIndex + 1}.<br>
+                                      <span class="text-xs opacity-70">Rules: Valid Shape, No '${labelChar}' in same col, Lattice Permutation</span>`,
+                        shapes: nextGeneration
+                    });
 
-                currentGeneration = nextGeneration;
+                    currentGeneration = nextGeneration;
+                }
             });
 
-            // Final Step: Add final tally
+            // Final Step: SU(N) Reduction
+            // Cancel columns with N boxes
+            let finalShapes = currentGeneration.map(item => reduceSUN(item.shape, item.map, nCap));
+            
+            // Deduplicate again after reduction
+            finalShapes = deduplicateShapes(finalShapes);
+
             steps.push({
-                description: "<strong>Final Decomposition</strong><br><span class=\"text-xs opacity-70\">Check Lattice Permutation Rule & SU(N) Validity</span>",
-                shapes: currentGeneration // In a full implementation, we filter by Lattice Permutation here. simplified logic usually ensures it by add order.
+                description: "<strong>Final Result</strong><br><span class=\"text-xs opacity-70\">Cancel columns with N boxes (Singlets)</span>",
+                shapes: finalShapes
             });
 
             return steps;
@@ -430,78 +460,126 @@
             return map;
         }
 
-        function expandShape(shape, map, count, labelType, nCap) {
-            // Adds 'count' boxes of 'labelType' to 'shape' according to Pieri's rule (single row add)
-            // Returns array of { shape: [...], map: [...] }
-            
+        function addSingleBox(shape, map, labelType, nCap) {
             let results = [];
             
-            // Recursive adder
-            function addBoxes(currentS, currentM, k, startRow) {
-                if (k === 0) {
-                    // Valid shape formed
-                    if (currentS.length <= nCap) { // SU(N) constraint on rows? No, on columns (length <= N)
-                         // Check Max Column Length?
-                         // Actually, shape length = number of rows. 
-                         // In SU(N), we shouldn't have more than N rows usually? 
-                         // Yes, columns of length N+1 are zero.
-                         if (currentS.length <= nCap) {
-                             results.push({ shape: JSON.parse(JSON.stringify(currentS)), map: JSON.parse(JSON.stringify(currentM)) });
-                         }
+            // Rule: Boxes with the same label must not appear in the same column.
+            // We identify which columns already contain the current label.
+            let usedCols = new Set();
+            for(let r=0; r<map.length; r++) {
+                for(let c=0; c<map[r].length; c++) {
+                    if (map[r][c] === labelType) {
+                        usedCols.add(c);
                     }
-                    return;
-                }
-
-                // Try adding to row r
-                for (let r = startRow; r <= currentS.length; r++) {
-                    // Constraints:
-                    // 1. Convexity: newS[r] < newS[r-1] (before adding, check capacity)
-                    // Actually, after adding, newS[r] must be <= newS[r-1]
-                    
-                    // Logic: We are adding to row r.
-                    // If r=0, always ok.
-                    // If r>0, need currentS[r] < currentS[r-1]. 
-                    // Wait, Pieri's rule says "no two boxes in same column".
-                    // This implies we add to distinct columns.
-                    // The recursive param `startRow` handles the "distinct columns" logic (always move down).
-                    
-                    // Check if adding to row r maintains partition property with PREVIOUS rows
-                    let canAdd = true;
-                    if (r > 0) {
-                        if (currentS[r] === undefined) { // New row
-                             // Can only create new row if prev row is strictly larger? No, just >=
-                             // But we are adding 1.
-                             // New row len becomes 1. Prev row must be >= 1.
-                             if (currentS[r-1] < 1) canAdd = false;
-                        } else {
-                             // Existing row
-                             // If we add 1, it becomes currentS[r]+1.
-                             // Must be <= currentS[r-1].
-                             if (currentS[r] + 1 > currentS[r-1]) canAdd = false;
-                        }
-                    }
-                    
-                    if (!canAdd) continue;
-
-                    // Prepare new state
-                    let nextS = [...currentS];
-                    let nextM = currentM.map(row => [...row]);
-
-                    if (nextS[r] === undefined) {
-                        nextS[r] = 1;
-                        nextM[r] = [labelType];
-                    } else {
-                        nextS[r]++;
-                        nextM[r].push(labelType);
-                    }
-                    
-                    // Recurse, startRow = r + 1 (Strictly down to ensure distinct columns for THIS batch of boxes)
-                    addBoxes(nextS, nextM, k-1, r + 1);
                 }
             }
 
-            addBoxes(shape, map, count, 0);
+            // Try adding to each row r (0 to nCap-1)
+            // In SU(N), a tableau can have at most N rows (since N+1 rows would imply a column of length N+1, which is 0)
+            // Actually, we can have N rows. A column of N is a singlet.
+            for (let r = 0; r < nCap; r++) {
+                const c = shape[r] || 0;
+                
+                // Constraint 1: Horizontal Strip / No Same Label in Column
+                if (usedCols.has(c)) continue;
+
+                // Constraint 2: Valid Young Tableau shape
+                // The new box at (r, c) must not violate the non-increasing row length property.
+                // We need shape[r] + 1 <= shape[r-1] (if r > 0)
+                if (r > 0) {
+                    const prevLen = shape[r-1];
+                    if (c + 1 > prevLen) continue;
+                }
+
+                // Create new state
+                let nextS = [...shape];
+                if (nextS[r] === undefined) nextS[r] = 0;
+                nextS[r]++;
+                
+                // Deep copy map
+                let nextM = map.map(row => [...row]);
+                if (!nextM[r]) nextM[r] = [];
+                nextM[r][c] = labelType;
+
+                results.push({ shape: nextS, map: nextM });
+            }
+            
             return results;
+        }
+
+        function checkLattice(map) {
+            let counts = {}; 
+            
+            // Reading order: Right to Left, Top to Bottom
+            // Row 0 (Right->Left), then Row 1 (Right->Left)...
+            for (let r = 0; r < map.length; r++) {
+                // Iterate backwards through columns
+                for (let c = map[r].length - 1; c >= 0; c--) {
+                    const val = map[r][c];
+                    if (!val || val === 'base') continue;
+                    
+                    // val is like 'added-1' (a), 'added-2' (b)
+                    const idx = parseInt(val.split('-')[1]);
+                    
+                    counts[idx] = (counts[idx] || 0) + 1;
+                    
+                    // Lattice Condition: n_a >= n_b >= n_c ...
+                    // At any point, count of label i must be >= count of label i+1
+                    if (idx > 1) {
+                        const prevCount = counts[idx-1] || 0;
+                        const currCount = counts[idx];
+                        if (currCount > prevCount) return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function reduceSUN(shape, map, nCap) {
+            if (shape.length === 0) return { shape, map };
+            
+            const maxCol = shape[0];
+            let colsKeep = [];
+            
+            for (let c = 0; c < maxCol; c++) {
+                // Calculate height of column c
+                let h = 0;
+                for (let r = 0; r < shape.length; r++) {
+                    if (shape[r] > c) h++;
+                }
+                
+                if (h < nCap) {
+                    colsKeep.push(c);
+                }
+            }
+            
+            let newShape = [];
+            let newMap = [];
+            
+            for (let r = 0; r < shape.length; r++) {
+                let newRowMap = [];
+                for (let c = 0; c < shape[r]; c++) {
+                    if (colsKeep.includes(c)) {
+                        newRowMap.push(map[r][c]);
+                    }
+                }
+                if (newRowMap.length > 0) {
+                    newMap.push(newRowMap);
+                    newShape.push(newRowMap.length);
+                }
+            }
+            
+            return { shape: newShape, map: newMap };
+        }
+
+        function deduplicateShapes(list) {
+            const seen = new Set();
+            return list.filter(item => {
+                const sig = JSON.stringify(item.map);
+                if (seen.has(sig)) return false;
+                seen.add(sig);
+                return true;
+            });
         }
 
         // Initial Load
