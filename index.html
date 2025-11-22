@@ -1,35 +1,75 @@
-JayAgarwal25/Young-Tableau<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quantum Bricks: Young Tableaux</title>
+    <title>SU(N) Symmetry Lab</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
+        :root {
+            --bg-space: #0f172a;
+            --bg-panel: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-blue: #3b82f6;   /* SU(2) / Isospin */
+            --accent-green: #10b981;  /* Hypercharge */
+            --accent-purple: #8b5cf6; /* Tensor */
+            --border-subtle: #334155;
+        }
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0f172a; /* Slate 900 */
-            color: #e2e8f0;
+            background-color: var(--bg-space);
+            color: var(--text-primary);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.08), transparent 25%), 
+                radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08), transparent 25%);
         }
         .font-mono {
             font-family: 'JetBrains Mono', monospace;
         }
-        .cell-anim {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        /* Scientific Panel Style */
+        .sci-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-radius: 0.75rem;
+        }
+        .sci-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+        .sci-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .sci-btn {
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+            color: white;
+            border: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        .sci-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
         }
         /* Custom scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: #1e293b;
+            background: transparent;
         }
         ::-webkit-scrollbar-thumb {
             background: #475569;
-            border-radius: 4px;
+            border-radius: 3px;
         }
         .fade-in {
             animation: fadeIn 0.5s ease-out forwards;
@@ -38,7 +78,6 @@ JayAgarwal25/Young-Tableau<!DOCTYPE html>
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* Remove spinner for number input */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
@@ -47,67 +86,93 @@ JayAgarwal25/Young-Tableau<!DOCTYPE html>
         input[type=number] {
             -moz-appearance: textfield;
         }
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .pop-in {
+            animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .math-symbol {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden">
+<body class="h-screen flex flex-col overflow-hidden text-slate-200">
 
     <!-- Navbar -->
-    <nav class="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center shrink-0 z-10">
+    <nav class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 p-4 flex justify-between items-center shrink-0 z-10">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-cyan-500 rounded flex items-center justify-center font-bold text-slate-900">λ</div>
-            <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Quantum Bricks</h1>
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20">λ</div>
+            <div>
+                <h1 class="text-lg font-semibold tracking-tight text-white">SU(N) Symmetry Lab</h1>
+                <div class="text-[10px] text-slate-400 font-mono tracking-wide">LIE ALGEBRA REPRESENTATIONS</div>
+            </div>
         </div>
-        <div class="text-slate-500 text-xs hidden md:block font-mono">
-            SU(N) REPRESENTATION THEORY TOOLKIT
+        <div class="flex items-center gap-4 text-xs font-medium text-slate-400">
+            <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                System Active
+            </span>
         </div>
     </nav>
 
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden relative">
         
         <!-- Left Sidebar: Controls -->
-        <aside class="w-full md:w-80 bg-slate-900 border-r border-slate-800 flex flex-col z-20 shadow-xl overflow-y-auto">
+        <aside class="w-full md:w-80 bg-slate-900/50 border-r border-slate-800 flex flex-col z-20 overflow-y-auto backdrop-blur-sm">
             
             <div class="p-6 space-y-8">
                 
                 <!-- Group Selection -->
-                <div class="space-y-2">
-                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Symmetry Group</label>
-                    <div class="flex items-center justify-center bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500 transition-all">
-                        <span class="text-slate-400 font-bold text-xl select-none">SU(</span>
+                <div class="space-y-3">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                        Symmetry Group
+                    </label>
+                    <div class="flex items-center justify-center sci-panel py-3 px-4 group hover:border-blue-500/30 transition-colors">
+                        <span class="text-slate-400 font-serif italic text-xl select-none mr-1">SU(</span>
                         <input type="number" id="groupN" value="3" min="2" max="20" 
-                            class="w-16 bg-transparent font-mono text-white font-bold focus:outline-none text-center text-2xl mx-1"
+                            class="w-12 bg-transparent font-mono text-blue-400 font-bold focus:outline-none text-center text-2xl"
                             onchange="initApp()">
-                        <span class="text-slate-400 font-bold text-xl select-none">)</span>
+                        <span class="text-slate-400 font-serif italic text-xl select-none ml-1">)</span>
                     </div>
                 </div>
 
                 <!-- Partition Input -->
-                <div class="space-y-2">
-                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Main Shape (λ)</label>
-                    <div class="flex gap-2">
+                <div class="space-y-3">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                        Young Tableau (λ)
+                    </label>
+                    <div class="flex flex-col gap-3">
                         <input type="text" id="partitionInput" value="2, 1" 
-                            class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 font-mono text-cyan-400 focus:outline-none focus:border-cyan-500 placeholder-slate-600"
+                            class="w-full sci-input rounded-lg px-3 py-2.5 font-mono text-sm text-blue-300 placeholder-slate-600"
                             placeholder="e.g. 2, 1">
-                        <button onclick="initApp()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded font-bold transition-colors shadow-lg shadow-cyan-900/20">
-                            Set
+                        <button onclick="initApp()" class="sci-btn rounded-lg px-4 py-2 font-semibold text-xs uppercase tracking-wide">
+                            Calculate Dimension
                         </button>
                     </div>
                 </div>
 
                 <!-- Stats Panel -->
-                <div class="p-4 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-2 opacity-5 text-6xl font-serif text-white">d</div>
-                    <div class="text-xs text-slate-400 uppercase tracking-widest mb-1">Dimension</div>
-                    <div class="text-3xl font-mono font-bold text-white mb-3 break-all leading-tight" id="dimensionVal">0</div>
+                <div class="sci-panel p-5 relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
                     
-                    <div class="flex justify-between text-xs border-t border-slate-700/50 pt-3">
-                        <div class="text-indigo-300">
-                            <div class="uppercase tracking-wider opacity-70 mb-1">Numerator</div>
-                            <div class="font-mono font-bold text-lg" id="numProd">0</div>
-                        </div>
-                        <div class="text-emerald-300 text-right">
-                            <div class="uppercase tracking-wider opacity-70 mb-1">Denominator</div>
-                            <div class="font-mono font-bold text-lg" id="denProd">0</div>
+                    <div class="relative z-10">
+                        <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">Dimension (d)</div>
+                        <div class="text-3xl font-mono font-bold text-white mb-4 break-all" id="dimensionVal">0</div>
+                        
+                        <div class="grid grid-cols-2 gap-4 border-t border-slate-700/50 pt-4">
+                            <div>
+                                <div class="uppercase tracking-wider text-slate-500 text-[10px] mb-1">Numerator</div>
+                                <div class="font-mono font-bold text-sm text-blue-400" id="numProd">0</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="uppercase tracking-wider text-slate-500 text-[10px] mb-1">Denominator</div>
+                                <div class="font-mono font-bold text-sm text-emerald-400" id="denProd">0</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -115,90 +180,126 @@ JayAgarwal25/Young-Tableau<!DOCTYPE html>
                 <!-- Tensor Product Section -->
                 <div class="pt-6 border-t border-slate-800">
                     <label class="text-xs font-bold uppercase tracking-wider text-purple-400 mb-3 block flex items-center gap-2">
-                        <span>Tensor Product</span>
-                        <span class="text-[10px] bg-purple-900/50 text-purple-300 px-1.5 rounded">VISUALIZER</span>
+                        <span>Interactions</span>
+                        <span class="text-[10px] bg-purple-500/10 text-purple-300 border border-purple-500/20 px-1.5 rounded">TENSOR</span>
                     </label>
-                    <div class="bg-slate-800/30 p-4 rounded-xl border border-purple-500/20 space-y-3">
-                        <div class="text-sm text-slate-400">Multiply λ by:</div>
-                        <div class="flex gap-2">
-                            <input type="text" id="tensorInput" placeholder="e.g. 1" value="1"
-                                class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 font-mono text-sm focus:border-purple-500 outline-none text-purple-300">
-                            <button onclick="startTensorViz()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded font-bold text-sm shadow-lg shadow-purple-900/20">
-                                Viz
-                            </button>
-                        </div>
+                    <div class="sci-panel p-4 space-y-3 border-purple-500/20">
+                        <div class="text-xs text-slate-400 leading-relaxed">Decompose tensor products of representations into irreducible components.</div>
+                        <a href="tensor.html" class="block w-full text-center bg-slate-800 hover:bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:border-purple-500 px-3 py-2 rounded-lg font-semibold text-xs transition-all uppercase tracking-wide">
+                            Open Visualizer &rarr;
+                        </a>
                     </div>
                 </div>
             </div>
         </aside>
 
         <!-- Main Canvas -->
-        <main class="flex-1 bg-[#0b1120] relative flex flex-col p-4 md:p-8 overflow-y-auto">
+        <main class="flex-1 bg-[#0f172a] relative flex flex-col p-4 md:p-8 overflow-y-auto">
             
             <!-- Background Grid -->
-            <div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: radial-gradient(#38bdf8 1px, transparent 1px); background-size: 32px 32px;"></div>
+            <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(90deg, #94a3b8 1px, transparent 1px); background-size: 24px 24px;"></div>
 
             <!-- TOP SECTION: Dimension Calculation -->
-            <div class="w-full max-w-5xl mx-auto mb-12 z-10">
-                <h2 class="text-slate-500 text-xs font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-cyan-500"></span> Calculation View
-                </h2>
+            <div id="calculationSection" class="w-full max-w-5xl mx-auto mb-12 z-10">
+                <div class="flex items-center gap-4 mb-8">
+                    <h2 class="text-slate-200 text-sm font-bold uppercase tracking-widest">Calculation Matrix</h2>
+                    <div class="h-px flex-1 bg-gradient-to-r from-slate-800 to-transparent"></div>
+                </div>
                 
-                <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-12">
+                <div class="flex flex-col md:flex-row items-start justify-center gap-8 md:gap-16">
                     
                     <!-- Numerator Grid -->
-                    <div class="flex flex-col items-center gap-3">
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-indigo-500/30 shadow-[0_0_30px_rgba(99,102,241,0.1)] backdrop-blur-sm transition-all hover:border-indigo-500/50">
+                    <div class="flex flex-col items-center gap-4 group">
+                        <div class="sci-panel p-8 relative group-hover:border-blue-500/30 transition-colors duration-500">
                             <div id="numeratorContainer" class="flex flex-col items-start gap-1"></div>
                         </div>
                         <div class="text-center">
-                            <div class="text-indigo-400 font-bold text-sm uppercase tracking-wider">Numerator</div>
-                            <div class="text-indigo-500/50 text-xs font-mono mt-1">N + (col - row)</div>
+                            <div class="text-blue-400 font-bold text-xs uppercase tracking-widest">Numerator Factors</div>
+                            <div class="text-slate-500 text-[10px] font-mono mt-1">N + (col - row)</div>
                         </div>
                     </div>
 
                     <!-- Divider -->
-                    <div class="text-slate-600 text-4xl font-light italic opacity-50 transform -rotate-12 hidden md:block">/</div>
-                    <div class="w-full h-px bg-slate-700 md:hidden my-4"></div>
+                    <div class="text-slate-700 text-4xl font-light italic pt-12 hidden md:block">/</div>
+                    <div class="w-full h-px bg-slate-800 md:hidden my-4"></div>
 
                     <!-- Denominator Grid -->
-                    <div class="flex flex-col items-center gap-3">
-                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.1)] backdrop-blur-sm transition-all hover:border-emerald-500/50">
+                    <div class="flex flex-col items-center gap-4 group">
+                        <div class="sci-panel p-8 relative group-hover:border-emerald-500/30 transition-colors duration-500">
                             <div id="denominatorContainer" class="flex flex-col items-start gap-1"></div>
                         </div>
                         <div class="text-center">
-                            <div class="text-emerald-400 font-bold text-sm uppercase tracking-wider">Denominator</div>
-                            <div class="text-emerald-500/50 text-xs font-mono mt-1">Hook Lengths</div>
+                            <div class="text-emerald-400 font-bold text-xs uppercase tracking-widest">Hook Lengths</div>
+                            <div class="text-slate-500 text-[10px] font-mono mt-1">h(i, j)</div>
                         </div>
                     </div>
 
                 </div>
             </div>
 
-            <!-- BOTTOM SECTION: Tensor Product Visualization (Conditional) -->
-            <div id="tensorSection" class="hidden w-full max-w-6xl mx-auto pt-8 border-t border-slate-800 z-10 pb-20">
-                <div class="flex justify-between items-end mb-6">
-                    <h2 class="text-purple-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-purple-500"></span> Tensor Product Visualization
-                    </h2>
-                    
-                    <!-- Step Controls -->
-                    <div class="flex items-center gap-2 bg-slate-800 rounded-lg p-1 border border-slate-700">
-                        <button onclick="prevStep()" class="px-3 py-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors text-sm">← Prev</button>
-                        <span id="stepIndicator" class="text-xs font-mono text-purple-300 px-2">Step 0</span>
-                        <button onclick="nextStep()" class="px-3 py-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors text-sm">Next →</button>
+            <!-- INFO SECTION: Formulae & Instructions -->
+            <div class="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 z-10">
+                
+                <!-- Formulae Card -->
+                <div class="sci-panel p-6">
+                    <h3 class="text-blue-400 text-xs font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
+                        Mathematical Formulation
+                    </h3>
+                    <div class="space-y-6 text-sm text-slate-400">
+                        <div>
+                            <div class="text-[10px] text-slate-500 uppercase mb-2 font-bold">Dimension Formula</div>
+                            <div class="font-mono bg-slate-900/50 p-4 rounded border border-slate-800 text-center text-slate-300">
+                                $$ \text{dim}(\lambda) = \prod_{(i,j) \in \lambda} \frac{N + (j-i)}{h_{i,j}} $$
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="border-l-2 border-blue-500/20 pl-4">
+                                <div class="text-[10px] text-slate-500 uppercase mb-1 font-bold">Numerator</div>
+                                <div class="text-blue-400 font-mono text-xs">N + (col - row)</div>
+                                <div class="text-[10px] text-slate-600 mt-1 leading-tight">Distance from diagonal shifted by N</div>
+                            </div>
+                            <div class="border-l-2 border-emerald-500/20 pl-4">
+                                <div class="text-[10px] text-slate-500 uppercase mb-1 font-bold">Denominator</div>
+                                <div class="text-emerald-400 font-mono text-xs">Hook Length (h)</div>
+                                <div class="text-[10px] text-slate-600 mt-1 leading-tight">Hook length of cell (i,j)</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Step Description -->
-                <div id="stepDescription" class="text-center mb-6 text-slate-300 font-medium bg-slate-800/50 py-2 rounded-lg border border-slate-700/50">
-                    Initializing...
+                <!-- Instructions & Fun Fact -->
+                <div class="space-y-6">
+                    <!-- Instructions -->
+                    <div class="sci-panel p-6">
+                        <h3 class="text-slate-300 text-xs font-bold uppercase tracking-widest mb-4">
+                            Protocol
+                        </h3>
+                        <ul class="text-sm text-slate-400 space-y-3 list-none">
+                            <li class="flex gap-3 items-start">
+                                <span class="text-blue-500 font-mono text-xs mt-0.5">01</span>
+                                <span>Select <strong>Symmetry Group</strong> (e.g., SU(3) for QCD).</span>
+                            </li>
+                            <li class="flex gap-3 items-start">
+                                <span class="text-blue-500 font-mono text-xs mt-0.5">02</span>
+                                <span>Define <strong>Tableau</strong> shape (e.g., "2, 1" for Octet).</span>
+                            </li>
+                            <li class="flex gap-3 items-start">
+                                <span class="text-blue-500 font-mono text-xs mt-0.5">03</span>
+                                <span>Analyze calculated dimension and factors.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Fun Fact -->
+                    <div class="bg-gradient-to-br from-amber-900/10 to-orange-900/10 border border-amber-500/20 rounded-xl p-5 relative overflow-hidden">
+                        <div class="absolute -right-2 -top-4 text-6xl opacity-5 select-none text-amber-500 font-serif">?</div>
+                        <h3 class="text-amber-500 text-xs font-bold uppercase tracking-widest mb-2">Historical Context</h3>
+                        <p class="text-xs text-amber-200/70 leading-relaxed">
+                            Alfred Young (1873-1940) introduced these tableaux to study symmetric groups. Their application to quantum chromodynamics (SU(3)) and the "Eightfold Way" was pivotal in classifying hadrons.
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Visualization Container -->
-                <div id="vizContainer" class="flex flex-wrap justify-center gap-8 min-h-[200px]">
-                    <!-- Shapes injected here -->
-                </div>
             </div>
 
         </main>
@@ -208,11 +309,6 @@ JayAgarwal25/Young-Tableau<!DOCTYPE html>
         // --- State ---
         var partition = [];
         var suN = 3;
-        
-        // Tensor Viz State
-        var tensorSteps = [];
-        var currentStepIndex = 0;
-        var tensorP2 = [];
 
         // --- Core Logic ---
 
@@ -272,6 +368,7 @@ JayAgarwal25/Young-Tableau<!DOCTYPE html>
         function renderGrid(type, container, customShape = null, highlightData = null) {
             container.innerHTML = '';
             const shapeToRender = customShape || partition;
+            let cellIndex = 0;
 
             shapeToRender.forEach((cols, r) => {
                 const rowDiv = document.createElement('div');
@@ -281,256 +378,26 @@ JayAgarwal25/Young-Tableau<!DOCTYPE html>
                     const cell = document.createElement('div');
                     
                     // Default Style
-                    let baseClass = "w-10 h-10 md:w-12 md:h-12 border-2 rounded flex items-center justify-center text-sm md:text-base font-mono font-bold select-none transition-all ";
+                    let baseClass = "w-10 h-10 md:w-12 md:h-12 border border-slate-700/50 rounded flex items-center justify-center text-sm md:text-base font-mono font-bold select-none transition-all ";
                     let content = "";
 
                     // Determine Content & specific styles
                     if (type === 'numerator') {
                         content = getNumeratorValue(r, c);
-                        baseClass += "bg-indigo-900/20 border-indigo-500/30 text-indigo-300";
+                        baseClass += "bg-blue-500/10 border-blue-500/30 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.1)]";
                     } else if (type === 'denominator') {
                         content = getHookLength(r, c, shapeToRender);
-                        baseClass += "bg-emerald-900/20 border-emerald-500/30 text-emerald-300";
-                    } else if (type === 'viz') {
-                        // Visualization Mode
-                        content = ""; // Empty usually, or label
-                        
-                        // Check if this cell is "Added" in this step
-                        // highlightData contains info about cell types: 'base', 'added-1', 'added-2'
-                        const cellType = highlightData ? highlightData[r]?.[c] : 'base';
-
-                        if (cellType === 'base' || !cellType) {
-                            baseClass += "bg-slate-800 border-slate-600 text-slate-500";
-                        } else if (cellType === 'added-1') { // Row 1 added
-                            baseClass += "bg-purple-600 border-purple-400 text-white animate-pulse";
-                            content = "a";
-                        } else if (cellType === 'added-2') { // Row 2 added
-                            baseClass += "bg-pink-600 border-pink-400 text-white animate-pulse";
-                            content = "b";
-                        } else if (cellType === 'added-3') {
-                             baseClass += "bg-orange-600 border-orange-400 text-white";
-                             content = "c";
-                        }
+                        baseClass += "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]";
                     }
 
-                    cell.className = baseClass;
+                    cell.className = baseClass + " pop-in";
+                    cell.style.animationDelay = `${cellIndex * 30}ms`;
                     cell.innerText = content;
                     rowDiv.appendChild(cell);
+                    cellIndex++;
                 }
                 container.appendChild(rowDiv);
             });
-        }
-
-
-        // --- Tensor Visualization Logic ---
-
-        function startTensorViz() {
-            const tInput = document.getElementById('tensorInput').value;
-            tensorP2 = tInput.split(/[,\s]+/).map(n => parseInt(n)).filter(n => !isNaN(n));
-            
-            if (tensorP2.length === 0) return;
-
-            // Generate Steps
-            tensorSteps = generateTensorSteps(partition, tensorP2, suN);
-            currentStepIndex = 0;
-            
-            document.getElementById('tensorSection').classList.remove('hidden');
-            // smooth scroll
-            document.getElementById('tensorSection').scrollIntoView({ behavior: 'smooth' });
-            
-            renderTensorStep();
-        }
-
-        function nextStep() {
-            if (currentStepIndex < tensorSteps.length - 1) {
-                currentStepIndex++;
-                renderTensorStep();
-            }
-        }
-
-        function prevStep() {
-            if (currentStepIndex > 0) {
-                currentStepIndex--;
-                renderTensorStep();
-            }
-        }
-
-        function renderTensorStep() {
-            const stepData = tensorSteps[currentStepIndex];
-            const container = document.getElementById('vizContainer');
-            container.innerHTML = '';
-
-            document.getElementById('stepIndicator').innerText = `Step ${currentStepIndex} / ${tensorSteps.length - 1}`;
-            document.getElementById('stepDescription').innerHTML = stepData.description;
-
-            if (stepData.shapes.length === 0) {
-                container.innerHTML = '<div class="text-slate-500 italic">No valid configurations found.</div>';
-                return;
-            }
-
-            stepData.shapes.forEach(item => {
-                const wrapper = document.createElement('div');
-                wrapper.className = "flex flex-col items-center gap-2 fade-in";
-                
-                // Render grid small
-                const gridDiv = document.createElement('div');
-                gridDiv.className = "flex flex-col items-start gap-px transform scale-90"; // slightly smaller
-                
-                // Custom render for viz
-                renderGrid('viz', gridDiv, item.shape, item.map);
-                
-                wrapper.appendChild(gridDiv);
-
-                // If final step, show dimension
-                if (currentStepIndex === tensorSteps.length - 1) {
-                    const dimDiv = document.createElement('div');
-                    const dim = calculateDimForShape(item.shape);
-                    dimDiv.className = "text-xs font-bold text-purple-300 bg-purple-900/30 px-2 py-1 rounded border border-purple-500/20";
-                    dimDiv.innerText = "dim: " + dim.toLocaleString();
-                    wrapper.appendChild(dimDiv);
-                }
-
-                container.appendChild(wrapper);
-            });
-        }
-
-        function calculateDimForShape(shape) {
-             let num = 1n, den = 1n;
-             for(let r=0; r<shape.length; r++) {
-                 for(let c=0; c<shape[r]; c++) {
-                     let hook = getHookLength(r, c, shape);
-                     let val = suN + (c - r);
-                     num *= BigInt(val);
-                     den *= BigInt(hook);
-                 }
-             }
-             return den === 0n ? 0n : num/den;
-        }
-
-        // --- Littlewood-Richardson Step Generator ---
-
-        function generateTensorSteps(p1, p2, nCap) {
-            // Step 0: Base
-            let steps = [{
-                description: "Start with the initial representation.",
-                shapes: [{ shape: [...p1], map: createBaseMap(p1) }]
-            }];
-
-            let currentGeneration = steps[0].shapes;
-
-            // Iterate through rows of P2
-            p2.forEach((count, rowIndex) => {
-                const label = ['added-1', 'added-2', 'added-3'][rowIndex] || 'added-x';
-                const labelChar = ['a', 'b', 'c'][rowIndex] || '?';
-                
-                let nextGeneration = [];
-                
-                // Expand each current shape
-                currentGeneration.forEach(parent => {
-                    const expansions = expandShape(parent.shape, parent.map, count, label, nCap);
-                    nextGeneration.push(...expansions);
-                });
-
-                // Deduplicate shapes for display (optional, but good for clean viz)
-                // Actually, distinct maps matter here.
-                
-                steps.push({
-                    description: `Add <strong>${count}</strong> boxes (${labelChar}) from row ${rowIndex + 1} of the second tableau.<br><span class="text-xs opacity-70">Rule: No two new boxes in the same column.</span>`,
-                    shapes: nextGeneration
-                });
-
-                currentGeneration = nextGeneration;
-            });
-
-            // Final Step: Add final tally
-            steps.push({
-                description: "<strong>Final Decomposition</strong><br><span class=\"text-xs opacity-70\">Check Lattice Permutation Rule & SU(N) Validity</span>",
-                shapes: currentGeneration // In a full implementation, we filter by Lattice Permutation here. simplified logic usually ensures it by add order.
-            });
-
-            return steps;
-        }
-
-        function createBaseMap(shape) {
-            let map = [];
-            shape.forEach(c => {
-                map.push(new Array(c).fill('base'));
-            });
-            return map;
-        }
-
-        function expandShape(shape, map, count, labelType, nCap) {
-            // Adds 'count' boxes of 'labelType' to 'shape' according to Pieri's rule (single row add)
-            // Returns array of { shape: [...], map: [...] }
-            
-            let results = [];
-            
-            // Recursive adder
-            function addBoxes(currentS, currentM, k, startRow) {
-                if (k === 0) {
-                    // Valid shape formed
-                    if (currentS.length <= nCap) { // SU(N) constraint on rows? No, on columns (length <= N)
-                         // Check Max Column Length?
-                         // Actually, shape length = number of rows. 
-                         // In SU(N), we shouldn't have more than N rows usually? 
-                         // Yes, columns of length N+1 are zero.
-                         if (currentS.length <= nCap) {
-                             results.push({ shape: JSON.parse(JSON.stringify(currentS)), map: JSON.parse(JSON.stringify(currentM)) });
-                         }
-                    }
-                    return;
-                }
-
-                // Try adding to row r
-                for (let r = startRow; r <= currentS.length; r++) {
-                    // Constraints:
-                    // 1. Convexity: newS[r] < newS[r-1] (before adding, check capacity)
-                    // Actually, after adding, newS[r] must be <= newS[r-1]
-                    
-                    // Logic: We are adding to row r.
-                    // If r=0, always ok.
-                    // If r>0, need currentS[r] < currentS[r-1]. 
-                    // Wait, Pieri's rule says "no two boxes in same column".
-                    // This implies we add to distinct columns.
-                    // The recursive param `startRow` handles the "distinct columns" logic (always move down).
-                    
-                    // Check if adding to row r maintains partition property with PREVIOUS rows
-                    let canAdd = true;
-                    if (r > 0) {
-                        if (currentS[r] === undefined) { // New row
-                             // Can only create new row if prev row is strictly larger? No, just >=
-                             // But we are adding 1.
-                             // New row len becomes 1. Prev row must be >= 1.
-                             if (currentS[r-1] < 1) canAdd = false;
-                        } else {
-                             // Existing row
-                             // If we add 1, it becomes currentS[r]+1.
-                             // Must be <= currentS[r-1].
-                             if (currentS[r] + 1 > currentS[r-1]) canAdd = false;
-                        }
-                    }
-                    
-                    if (!canAdd) continue;
-
-                    // Prepare new state
-                    let nextS = [...currentS];
-                    let nextM = currentM.map(row => [...row]);
-
-                    if (nextS[r] === undefined) {
-                        nextS[r] = 1;
-                        nextM[r] = [labelType];
-                    } else {
-                        nextS[r]++;
-                        nextM[r].push(labelType);
-                    }
-                    
-                    // Recurse, startRow = r + 1 (Strictly down to ensure distinct columns for THIS batch of boxes)
-                    addBoxes(nextS, nextM, k-1, r + 1);
-                }
-            }
-
-            addBoxes(shape, map, count, 0);
-            return results;
         }
 
         // Initial Load
